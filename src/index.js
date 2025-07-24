@@ -5,6 +5,7 @@ import userRouter from '../routers/user.router.js'
 import cookieParser from 'cookie-parser'
 import spaceRouter from '../routers/space.router.js'
 import projectRouter from '../routers/project.router.js'
+import cors from 'cors'
 dotenv.config()
 
 const app = express()

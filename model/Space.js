@@ -7,12 +7,13 @@ const spaceSchema=mongoose.Schema({
     description:{
         type: String
     },
-    owenerId: {
+    ownerId: {
         type: mongoose.Schema.Types.ObjectId,
         ref:'User',
         required: true
     },
     members:[{type: mongoose.Schema.Types.ObjectId, ref:'User'}],
+    admin:[{type: mongoose.Schema.Types.ObjectId, ref:'User'}],
     projects:[{
         type: mongoose.Schema.Types.ObjectId,ref:'Project'
     }]
@@ -25,3 +26,7 @@ export default SpaceModel
 
 
 // add role 
+
+// space- BU units
+  // Tigo Agent app - project
+  // 
