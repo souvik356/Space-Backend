@@ -9,7 +9,11 @@ const TaskSchema= mongoose.Schema({
         ref: 'Project',
         required: true
     },
-    attachment:[{type: String}], // attaching name , description , linkOfAttachment
+    attachment:[{
+        name: String,
+        description: String,
+        link: String
+    }], 
     assignee:{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

@@ -1,5 +1,5 @@
 import express from 'express'
-import { addMemberController, createSpaceController, deleteSpaceController, getSpaceById, getSpacesController, makeAdminController, removeMemberController } from '../controller/space.controller.js'
+import { addMemberController, createSpaceController, deleteSpaceController, getAvailableUsersForSpace, getSpaceById, getSpacesController, makeAdminController, removeMemberController } from '../controller/space.controller.js'
 import userAuth from '../middleware/userAuth.js'
 
 const spaceRouter = express.Router()
@@ -12,6 +12,8 @@ spaceRouter.delete('/deleteSpace/:id',userAuth,deleteSpaceController) // owner c
 spaceRouter.get('/getAllSpaces',userAuth,getSpacesController) // it is for all who all are part of space 
 
 spaceRouter.put('/makeAdmin/:spaceId/:userId', userAuth, makeAdminController)  // only owner can do 
+
+spaceRouter.get('/:spaceId/available-users',userAuth,getAvailableUsersForSpace)
 
 
 export default spaceRouter

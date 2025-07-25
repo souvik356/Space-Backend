@@ -285,3 +285,36 @@ export const makeAdminController = async (req, res) => {
     });
   }
 };
+
+export const getAvailableUsersForSpace =async (req,res) => {
+  try {
+    const loggedInUser=req.user
+    const {spaceId}=req.params
+    const space= await SpaceModel.findById(spaceId)
+    if(!space){
+      return res.status(400).json({
+        message:'No space found',
+        success: false,
+        error:true
+      })
+    }
+    console.log(space)
+
+    const existingMember = [space.ownerId,...space.members,...space.admin]
+    const availableUser = await UserModel.find({_id:{$nin: existingMember}})
+
+    return res.status(200).json({
+      message:'Available user fetched successfully',
+      data: availableUser,
+      success: true,
+      error: false,
+    })
+
+  } catch (error) {
+    return res.status(500).json({
+      message: `${error || error.message}`,
+      success: false,
+      error: true,
+    });
+  }
+}
