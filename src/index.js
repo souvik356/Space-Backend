@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser'
 import spaceRouter from '../routers/space.router.js'
 import projectRouter from '../routers/project.router.js'
 import cors from 'cors'
+import taskRouter from '../routers/task.router.js'
 dotenv.config()
 
 const app = express()
@@ -21,6 +22,7 @@ app.use(express.json())
 app.use('/api/user',userRouter)
 app.use('/api/spaces',spaceRouter)
 app.use('/api/project',projectRouter)
+app.use('/api/task',taskRouter)
 
 connectDb().then(()=>{
     console.log('Database connected successfully')
