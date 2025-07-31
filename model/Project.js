@@ -36,7 +36,13 @@ const ProjectSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
-    
+    endDate:{
+        type: Date,
+        validate: (value)=>{
+           return value > new Date()
+        },
+        message:'End date must be greater then present date'
+    },
 
     // phases of project
 

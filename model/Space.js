@@ -12,6 +12,7 @@ const spaceSchema=mongoose.Schema({
         ref:'User',
         required: true
     },
+    
     members:[{type: mongoose.Schema.Types.ObjectId, ref:'User'}],
     admin:[{type: mongoose.Schema.Types.ObjectId, ref:'User'}],
     projects:[{

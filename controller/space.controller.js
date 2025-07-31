@@ -3,42 +3,65 @@ import UserModel from "../model/User.js";
 
 export const createSpaceController = async (req, res) => {
   try {
-    const { spaceName, description } = req.body;
+    const { spaceName, description, members = [] } = req.body;
     const loggedInUser = req.user;
+
     if (!spaceName || !description) {
       return res.status(400).json({
-        message: "please give space name and description",
+        message: "Please provide space name and description",
         error: true,
-        succes: false,
+        success: false,
       });
     }
+
+    // Ensure loggedInUser is always included
+    const allMembers = [...new Set([...members, loggedInUser._id.toString()])];
+
+    // Check that all members exist in the UserModel
+    const validUsers = await UserModel.find({ _id: { $in: allMembers } }).select('_id');
+    const validUserIds = validUsers.map(user => user._id.toString());
+
+    // Check for any invalid members
+    const invalidMembers = allMembers.filter(id => !validUserIds.includes(id));
+    if (invalidMembers.length > 0) {
+      return res.status(400).json({
+        message: "One or more member IDs are invalid",
+        invalidMembers,
+        success: false,
+        error: true,
+      });
+    }
+
     const space = new SpaceModel({
       spaceName,
       description,
       ownerId: loggedInUser._id,
-      members: [loggedInUser._id],
+      members: validUserIds, // all valid members
     });
-    const Space = await space.save();
 
-    await UserModel.findByIdAndUpdate(
-      { _id: loggedInUser._id },
-      { $push: { spaces: space._id } }
+    const createdSpace = await space.save();
+
+    // Add this space to each user's `spaces` array
+    await UserModel.updateMany(
+      { _id: { $in: validUserIds } },
+      { $push: { spaces: createdSpace._id } }
     );
 
     return res.status(200).json({
       message: "Space created successfully",
-      data: Space,
+      data: createdSpace,
       success: true,
       error: false,
     });
   } catch (error) {
     res.status(500).json({
-      message: "Failed to create space " + error,
+      message: "Failed to create space: " + error.message,
       error: true,
-      succes: false,
+      success: false,
     });
   }
 };
+
 
 export const getSpaceById = async (req, res) => {
   try {
@@ -77,8 +100,10 @@ export const addMemberController = async (req, res) => {
 
     const space = await SpaceModel.findById(req.params.id);
 
-    const isOwner= space.ownerId.toString() === loggedInUser._id.toString()
-    const isAdmin = space.admin.some(id => id.toString()===loggedInUser._id.toString() )
+    const isOwner = space.ownerId.toString() === loggedInUser._id.toString();
+    const isAdmin = space.admin.some(
+      (id) => id.toString() === loggedInUser._id.toString()
+    );
 
     if (!isOwner && !isAdmin) {
       return res.status(400).json({
@@ -87,7 +112,6 @@ export const addMemberController = async (req, res) => {
         success: false,
       });
     }
-
 
     if (space.members.includes(memberId)) {
       return res.status(400).json({
@@ -133,8 +157,10 @@ export const removeMemberController = async (req, res) => {
       });
     }
 
-    const isOwner= loggedInUser._id.toString() === space.ownerId.toString()
-    const isAdmin = space.admin.some(id => id.toString() === loggedInUser._id.toString())
+    const isOwner = loggedInUser._id.toString() === space.ownerId.toString();
+    const isAdmin = space.admin.some(
+      (id) => id.toString() === loggedInUser._id.toString()
+    );
 
     if (!isOwner && !isAdmin) {
       return res.status(400).json({
@@ -219,7 +245,9 @@ export const getSpacesController = async (req, res) => {
     const loggedInUser = req.user;
     const spaces = await SpaceModel.find({
       $or: [{ ownerId: loggedInUser._id }, { members: loggedInUser._id }],
-    });
+    })
+      .populate("members", "name email")
+      .populate("ownerId", "name email");
 
     return res.status(200).json({
       message: "All spaces fetched successfully",
@@ -276,7 +304,12 @@ export const makeAdminController = async (req, res) => {
 
     return res
       .status(200)
-      .json({ message: "User promoted to admin",error:false,success: true,data: isSpaceInDb });
+      .json({
+        message: "User promoted to admin",
+        error: false,
+        success: true,
+        data: isSpaceInDb,
+      });
   } catch (error) {
     return res.status(500).json({
       message: `${error || error.message}`,
@@ -286,35 +319,27 @@ export const makeAdminController = async (req, res) => {
   }
 };
 
-export const getAvailableUsersForSpace =async (req,res) => {
+export const getAvailableUsersForNewSpace = async (req, res) => {
   try {
-    const loggedInUser=req.user
-    const {spaceId}=req.params
-    const space= await SpaceModel.findById(spaceId)
-    if(!space){
-      return res.status(400).json({
-        message:'No space found',
-        success: false,
-        error:true
-      })
-    }
-    console.log(space)
+    const loggedInUserId = req.user._id;
 
-    const existingMember = [space.ownerId,...space.members,...space.admin]
-    const availableUser = await UserModel.find({_id:{$nin: existingMember}})
+    // Fetch all users except the currently logged-in one
+    const availableUsers = await UserModel.find({
+      _id: { $ne: loggedInUserId },
+    });
 
     return res.status(200).json({
-      message:'Available user fetched successfully',
-      data: availableUser,
+      message: "Available users fetched successfully",
+      data: availableUsers,
       success: true,
       error: false,
-    })
-
+    });
   } catch (error) {
     return res.status(500).json({
-      message: `${error || error.message}`,
+      message: `${error?.message || error}`,
       success: false,
       error: true,
     });
   }
-}
+};
+

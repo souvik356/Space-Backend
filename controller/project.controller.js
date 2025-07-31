@@ -11,7 +11,7 @@ export const createProjectController = async (req, res) => {
     const loggedInUser = req.user;
     // console.log(spaceId);
 
-    const { projectName, description } = req.body;
+    const { projectName, description, members=[],endDate } = req.body;
     if (!projectName || !description) {
       return res.status(400).json({
         message: "please add project name and description",
@@ -51,6 +51,7 @@ export const createProjectController = async (req, res) => {
     const project = new ProjectModel({
       projectName,
       spaceId: spaceId,
+      endDate: endDate || null,
       description,
       members: uniqueMembers,
       Pipelines: [
