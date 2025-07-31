@@ -9,7 +9,7 @@ export const createProjectController = async (req, res) => {
   try {
     const { spaceId } = req.params;
     const loggedInUser = req.user;
-    console.log(spaceId);
+    // console.log(spaceId);
 
     const { projectName, description } = req.body;
     if (!projectName || !description) {
@@ -21,7 +21,7 @@ export const createProjectController = async (req, res) => {
     }
 
     const space = await SpaceModel.findById(spaceId);
-    console.log("space", space);
+    // console.log("space", space);
     if (!space) {
       return res.status(400).json({
         message: "space not exist",
@@ -56,7 +56,7 @@ export const createProjectController = async (req, res) => {
       ],
     });
     const savedProject = await project.save();
-    console.log(savedProject);
+    // console.log(savedProject);
     space.projects.push(project._id);
     await space.save();
 
@@ -106,7 +106,7 @@ export const addMemberToProjectController = async (req, res) => {
     const isAdmin = space.admin.some(
       (id) => id.toString() === loggedInUser.toString()
     );
-    console.log("isAdmin,isOwner", isAdmin, isOwner);
+    // console.log("isAdmin,isOwner", isAdmin, isOwner);
 
     if (!isOwner && !isAdmin) {
       return res.status(400).json({
@@ -121,7 +121,7 @@ export const addMemberToProjectController = async (req, res) => {
       space.admin.some((id) => id.toString() === memberId) ||
       space.members.some((id) => id.toString() === memberId);
 
-    console.log("memberInSpace", memberInSpace);
+    // console.log("memberInSpace", memberInSpace);
 
     if (!memberInSpace) {
       return res.status(400).json({
@@ -261,3 +261,39 @@ export const getMembersForProject = async (req,res) => {
     });
   }
 }
+
+export const getProjectsUnderSpaceController = async (req, res) => {
+  try {
+    const { spaceId } = req.params;
+
+    const space = await SpaceModel.findById(spaceId).populate({
+      path: "projects",
+      populate: {
+        path: "members",
+        select: "name email"
+      }
+    });
+
+    if (!space) {
+      return res.status(400).json({
+        message: "Space not found",
+        error: true,
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Projects under space fetched successfully",
+      data: space.projects,
+      success: true,
+      error: false,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      message: `${error || error.message}`,
+      error: true,
+      success: false,
+    });
+  }
+};
