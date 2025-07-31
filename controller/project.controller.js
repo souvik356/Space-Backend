@@ -44,11 +44,15 @@ export const createProjectController = async (req, res) => {
       });
     }
 
+    const uniqueMembers = Array.from(
+      new Set([...(members || []), loggedInUser._id.toString()])
+    );
+
     const project = new ProjectModel({
       projectName,
       spaceId: spaceId,
       description,
-      members: [loggedInUser._id],
+      members: uniqueMembers,
       Pipelines: [
         { status: "To Do", Task: [] },
         { status: "In Progress", Task: [] },
@@ -74,6 +78,7 @@ export const createProjectController = async (req, res) => {
     });
   }
 };
+
 
 export const addMemberToProjectController = async (req, res) => {
   try {
