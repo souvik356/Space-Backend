@@ -49,7 +49,7 @@ const ProjectSchema = mongoose.Schema({
     status: {
         type: String,
         enum :['To Do','In progress','Done'],
-        default:'To Do'
+        default:'In Progress'
     }
 
 },{

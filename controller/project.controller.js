@@ -226,7 +226,7 @@ export const removeMemberFromProjectController = async (req, res) => {
 
 export const getMembersForProject = async (req,res) => {
   try {
-    const {projectId} = req.params
+    const {spaceId} = req.params
     const loggedInUser= req.user
     const project = await ProjectModel.findById(projectId)
     if(!project){
@@ -303,3 +303,28 @@ export const getProjectsUnderSpaceController = async (req, res) => {
     });
   }
 };
+
+export const getSpaceUsers = async (req, res) => {
+  try {
+    const { spaceId } = req.params;
+    const space = await SpaceModel.findById(spaceId);
+    if (!space) return res.status(404).json({ message: "Space not found" });
+
+    const userIds = [
+      space.ownerId.toString(),
+      ...space.admin.map(id => id.toString()),
+      ...space.members.map(id => id.toString())
+    ];
+    const users = await UserModel.find({ _id: { $in: userIds } }).select("name email");
+
+    return res.status(200).json({
+      message: "Space users fetched",
+      data: users,
+      success: true,
+      error: false
+    });
+  } catch (e) {
+    return res.status(500).json({ message: e.message, success: false, error: true });
+  }
+};
+
