@@ -9,23 +9,21 @@ export const createProjectController = async (req, res) => {
   try {
     const { spaceId } = req.params;
     const loggedInUser = req.user;
-    // console.log(spaceId);
 
-    const { projectName, description, members=[],endDate } = req.body;
+    const { projectName, description, members = [], endDate } = req.body;
     if (!projectName || !description) {
       return res.status(400).json({
         message: "please add project name and description",
-        error: false,
+        error: true,
         success: false,
       });
     }
 
     const space = await SpaceModel.findById(spaceId);
-    // console.log("space", space);
     if (!space) {
       return res.status(400).json({
         message: "space not exist",
-        error: false,
+        error: true,
         success: false,
       });
     }
@@ -34,38 +32,35 @@ export const createProjectController = async (req, res) => {
     const isAdmin = space.admin.some(
       (id) => id.toString() === loggedInUser._id.toString()
     );
-    // const {projectName,description}=req.body
 
     if (!isOwner && !isAdmin) {
-      return res.status(400).json({
+      return res.status(403).json({
         message: "only admin or owner can create project",
-        error: false,
+        error: true,
         success: false,
       });
     }
 
+    // add loggedInUser as default member
     const uniqueMembers = Array.from(
       new Set([...(members || []), loggedInUser._id.toString()])
     );
 
     const project = new ProjectModel({
       projectName,
-      spaceId: spaceId,
-      endDate: endDate || null,
+      spaceId,
       description,
+      endDate: endDate || null,
       members: uniqueMembers,
-      Pipelines: [
-        { status: "To Do", Task: [] },
-        { status: "In Progress", Task: [] },
-        { status: "Done", Task: [] },
-      ],
+      pipelines: [], // keep empty, pipelines will be created separately
     });
+
     const savedProject = await project.save();
-    // console.log(savedProject);
+
     space.projects.push(project._id);
     await space.save();
 
-    return res.status(200).json({
+    return res.status(201).json({
       message: "Project created successfully",
       error: false,
       success: true,
@@ -73,12 +68,13 @@ export const createProjectController = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({
-      message: `${error || error.message}`,
+      message: error.message || "Internal Server Error",
       success: false,
       error: true,
     });
   }
 };
+
 
 
 export const addMemberToProjectController = async (req, res) => {
@@ -327,4 +323,195 @@ export const getSpaceUsers = async (req, res) => {
     return res.status(500).json({ message: e.message, success: false, error: true });
   }
 };
+
+
+
+// GET /api/projects
+export const getAllProjectsController = async (req, res) => {
+  try {
+    const loggedInUser = req.user;
+
+    // Fetch projects where user is member/admin/owner
+    const projects = await ProjectModel.find({
+      members: loggedInUser._id,
+    }).select("projectName description");
+
+    return res.status(200).json({
+      message: "Projects fetched successfully",
+      data: projects,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message || "Something went wrong",
+      success: false,
+      error: true,
+    });
+  }
+};
+
+// GET /api/projects/:projectId/pipelines (available pipline to create task)
+export const getPipelinesForProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const loggedInUser = req.user;
+
+    const project = await ProjectModel.findById(projectId).select("pipelines spaceId");
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Ensure user belongs to this project
+    if (!project.members.includes(loggedInUser._id)) {
+      return res.status(403).json({
+        message: "You are not a member of this project",
+        success: false,
+        error: true,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Pipelines fetched successfully",
+      data: project.pipelines.map((p) => ({
+        _id: p._id,
+        name: p.name,
+        description: p.description,
+      })),
+      success: true,
+      error: false,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: err.message || "Something went wrong",
+      success: false,
+      error: true,
+    });
+  }
+};
+
+// GET /api/projects/:projectId/pipelines-with-tasks (it will show pipeline with task under project)
+export const getPipelinesWithTasks = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const loggedInUser = req.user;
+
+    const project = await ProjectModel.findById(projectId)
+      .populate("pipelines.tasks.assignedTo", "name email") // populate assigned user details
+      .exec();
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // check membership
+    const isMember = project.members.some(
+      (id) => id.toString() === loggedInUser._id.toString()
+    );
+    if (!isMember) {
+      return res.status(403).json({
+        message: "You are not a member of this project",
+        success: false,
+        error: true,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Pipelines with tasks fetched successfully",
+      data: project.pipelines.map((pipeline) => ({
+        _id: pipeline._id,
+        name: pipeline.name,
+        description: pipeline.description,
+        startDate: pipeline.startDate,
+        endDate: pipeline.endDate,
+        tasks: pipeline.tasks.map((task) => ({
+          _id: task._id,
+          taskName: task.taskName,
+          description: task.description,
+          startDate: task.startDate,
+          endDate: task.endDate,
+          status: task.status,
+          assignedTo: task.assignedTo, // populated user info
+          attachments: task.attachments,
+        })),
+      })),
+      success: true,
+      error: false,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: err.message || "Something went wrong",
+      success: false,
+      error: true,
+    });
+  }
+};
+
+
+// GET /api/dashboard/projects  (api to show project and pipeline )
+export const getProjectsWithPipelines = async (req, res) => {
+  try {
+    const loggedInUser = req.user;
+
+    // find all projects where user is a member
+    const projects = await ProjectModel.find({
+      members: loggedInUser._id,
+    })
+      .populate("spaceId", "name") // populate space name
+      .exec();
+
+    if (!projects.length) {
+      return res.status(404).json({
+        message: "No projects found for this user",
+        success: false,
+        error: true,
+      });
+    }
+
+    const data = projects.map((project) => ({
+      _id: project._id,
+      projectName: project.projectName,
+      description: project.description,
+      space: project.spaceId ? { _id: project.spaceId._id, name: project.spaceId.name } : null,
+      pipelines: (project.pipelines || []).map((pl) => ({
+        _id: pl._id,
+        name: pl.name,
+        description: pl.description,
+        startDate: pl.startDate,
+        endDate: pl.endDate,
+      })),
+    }));
+
+    return res.status(200).json({
+      message: "Projects with pipelines fetched successfully",
+      data,
+      success: true,
+      error: false,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: err.message || "Something went wrong",
+      success: false,
+      error: true,
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
+
 

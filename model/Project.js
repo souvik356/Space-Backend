@@ -1,61 +1,41 @@
 import mongoose from "mongoose";
 
-const ProjectSchema = mongoose.Schema({
-    projectName:{
-        type: String,
-        required: true
-    },
-    spaceId:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref:'Space',
-        required: true
-    },
-    description:{
-        type: String,
-        required: true
-    },
+const { Schema } = mongoose;
 
-    Pipelines:[{
-        status:{
-            type: String,                                    // [task 1 ,task2, task3]
-            enum:['To Do','In Progress','Done'],
-            required: true  
-        },
-        Task:[{
-            type: mongoose.Schema.Types.ObjectId,
-            ref:'Task'
-        }]
-    }],
+// Subdocument for Pipeline embedded inside Project
+const PipelineSubSchema = new Schema(
+  {
+    name: { type: String, required: true, trim: true }, // e.g., "Yas Chatbot"
+    description: { type: String, default: "" },
+    startDate: { type: Date },
+    endDate: { type: Date },
+    tasks: [{ type: Schema.Types.ObjectId, ref: "Task" }], // tasks under this pipeline
+  },
+  { _id: true, timestamps: true }
+);
 
-    npTask:[{
-        type: mongoose.Schema.Types.ObjectId,
-        ref:'Task'
-    }],
+const ProjectSchema = new Schema(
+  {
+    projectName: { type: String, required: true },
+    spaceId: { type: Schema.Types.ObjectId, ref: "Space", required: true },
+    description: { type: String, required: true },
 
-    members: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    endDate:{
-        type: Date,
-        validate: (value)=>{
-           return value > new Date()
-        },
-        message:'End date must be greater then present date'
-    },
+    // NEW: pipelines as embedded subdocuments
+    pipelines: [PipelineSubSchema],
 
-    // phases of project
+    // keep project members (must all be in the space)
+    members: [{ type: Schema.Types.ObjectId, ref: "User" }],
+
+    endDate: { type: Date },
 
     status: {
-        type: String,
-        enum :['To Do','In progress','Done'],
-        default:'In Progress'
-    }
+      type: String,
+      enum: ["To Do", "In progress", "Done"],
+      default: "To Do",
+    },
+  },
+  { timestamps: true }
+);
 
-},{
-    timestamps: true
-})
-
-const ProjectModel = mongoose.model('Project',ProjectSchema)
-
-export default ProjectModel
+const ProjectModel = mongoose.model("Project", ProjectSchema);
+export default ProjectModel;
