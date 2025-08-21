@@ -5,12 +5,13 @@ import SpaceModel from '../model/Space.js';
 // POST /api/tasks
 export const createTaskController = async (req, res) => {
   try {
-    const { projectId, pipelineId, taskName, description = "", startDate, endDate, assignedTo, attachments = [] } = req.body;
+    const { projectId } = req.params;
+    const { pipelineId, taskName, description, startDate, endDate, assignedTo, attachments } = req.body;
     const loggedInUser = req.user;
 
-    if (!projectId || !pipelineId || !taskName?.trim()) {
+    if (!pipelineId || !taskName?.trim()) {
       return res.status(400).json({
-        message: "Project, Pipeline and Task name are required",
+        message: "Pipeline and Task name are required",
         success: false,
         error: true,
       });
@@ -25,27 +26,7 @@ export const createTaskController = async (req, res) => {
       });
     }
 
-    const space = await SpaceModel.findById(project.spaceId);
-    if (!space) {
-      return res.status(404).json({
-        message: "Space not found",
-        success: false,
-        error: true,
-      });
-    }
-
-    // only members can create tasks
-    const isMember = project.members.some(
-      (id) => id.toString() === loggedInUser._id.toString()
-    );
-    if (!isMember) {
-      return res.status(403).json({
-        message: "Only project members can create tasks",
-        success: false,
-        error: true,
-      });
-    }
-
+    // find the pipeline inside project
     const pipeline = project.pipelines.id(pipelineId);
     if (!pipeline) {
       return res.status(404).json({
@@ -55,33 +36,32 @@ export const createTaskController = async (req, res) => {
       });
     }
 
-    const newTask = {
-      taskName: taskName.trim(),
+    // push the task into pipeline
+    pipeline.tasks.push({
+      taskName,
       description,
       startDate: startDate || null,
       endDate: endDate || null,
-      status: "To Do",  // default
-      assignedTo: assignedTo || null, // userId
-      attachments,
-    };
+      status: "To Do",
+      assignedTo: assignedTo || null,
+      attachments: attachments || [],
+    });
 
-    pipeline.tasks.push(newTask);
     await project.save();
-
-    const createdTask = pipeline.tasks[pipeline.tasks.length - 1];
 
     return res.status(201).json({
       message: "Task created successfully",
-      data: createdTask,
       success: true,
       error: false,
+      data: pipeline.tasks[pipeline.tasks.length - 1], 
     });
   } catch (err) {
     return res.status(500).json({
-      message: err.message || "Something went wrong",
+      message: err?.message || "Internal Server Error",
       success: false,
       error: true,
     });
   }
 };
+
 
