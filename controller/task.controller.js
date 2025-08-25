@@ -29,7 +29,7 @@ export const createTaskController = async (req, res) => {
       return res.status(404).json({ message: "Pipeline not found", success: false, error: true });
     }
 
-    // 1️⃣ create task in Task collection
+    // create task in Task collection
     const newTask = await TaskModel.create({
       taskName,
       description,

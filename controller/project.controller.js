@@ -400,9 +400,19 @@ export const getPipelinesWithTasks = async (req, res) => {
     const { projectId } = req.params;
     const loggedInUser = req.user;
 
+    if (!loggedInUser || !loggedInUser._id) {
+      return res.status(401).json({
+        message: "Unauthorized: user not found",
+        success: false,
+        error: true,
+      });
+    }
+
     const project = await ProjectModel.findById(projectId)
-      .populate("pipelines.tasks.assignedTo", "name email") // populate assigned user details
-      .exec();
+      .populate({
+        path: "pipelines.tasks",
+        populate: { path: "assignedTo", select: "name email" },
+      });
 
     if (!project) {
       return res.status(404).json({
@@ -412,7 +422,6 @@ export const getPipelinesWithTasks = async (req, res) => {
       });
     }
 
-    // check membership
     const isMember = project.members.some(
       (id) => id.toString() === loggedInUser._id.toString()
     );
@@ -426,23 +435,7 @@ export const getPipelinesWithTasks = async (req, res) => {
 
     return res.status(200).json({
       message: "Pipelines with tasks fetched successfully",
-      data: project.pipelines.map((pipeline) => ({
-        _id: pipeline._id,
-        name: pipeline.name,
-        description: pipeline.description,
-        startDate: pipeline.startDate,
-        endDate: pipeline.endDate,
-        tasks: pipeline.tasks.map((task) => ({
-          _id: task._id,
-          taskName: task.taskName,
-          description: task.description,
-          startDate: task.startDate,
-          endDate: task.endDate,
-          status: task.status,
-          assignedTo: task.assignedTo, // populated user info
-          attachments: task.attachments,
-        })),
-      })),
+      data: project.pipelines,
       success: true,
       error: false,
     });
@@ -454,6 +447,7 @@ export const getPipelinesWithTasks = async (req, res) => {
     });
   }
 };
+
 
 
 // GET /api/dashboard/projects  (api to show project and pipeline )

@@ -8,6 +8,7 @@ const projectRouter = express.Router()
 
 // Pipelines
 projectRouter.post("/pipelines", userAuth, createPipelineController);
+
 projectRouter.get("/:projectId/pipelines", userAuth, listPipelinesController);
 
 // Tasks under a pipeline
@@ -32,13 +33,13 @@ projectRouter.get("/getProjectsUnderSpace/:spaceId", userAuth, getProjectsUnderS
 projectRouter.get('/space-users/:spaceId', userAuth, getSpaceUsers);
 
 // show pipeline with task
-projectRouter.get("/:projectId/pipelines-with-tasks", getPipelinesWithTasks);
+projectRouter.get("/:projectId/pipelines-with-tasks",userAuth, getPipelinesWithTasks);
 
 // show available pipleline for task
-projectRouter.get("/projects/:projectId/pipelines",getPipelinesForProject)
+projectRouter.get("/projects/:projectId/pipelines",userAuth,getPipelinesForProject)
 
 // show project with pipeline
-projectRouter.get('/project/getProjectWithPipeline',getProjectsWithPipelines)
+projectRouter.get('/getProjectWithPipeline',userAuth,getProjectsWithPipelines)
 
 
 
