@@ -13,7 +13,8 @@ const isOwnerOrAdminOfSpace = (space, userId) => {
 // POST /api/pipelines - to create pipeline
 export const createPipelineController = async (req, res) => {
     try {
-      const { projectId, name, description = "", startDate, endDate } = req.body;
+      const { projectId,name, description = "", startDate, endDate } = req.body;
+      // const {projectId} = req.params
       const loggedInUser = req.user;
   
       if (!projectId || !name?.trim()) {

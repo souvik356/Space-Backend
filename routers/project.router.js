@@ -7,7 +7,7 @@ const projectRouter = express.Router()
 
 
 // Pipelines
-projectRouter.post("/:projectId/pipelines", userAuth, createPipelineController);
+projectRouter.post("/pipelines", userAuth, createPipelineController);
 projectRouter.get("/:projectId/pipelines", userAuth, listPipelinesController);
 
 // Tasks under a pipeline
