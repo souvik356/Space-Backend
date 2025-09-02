@@ -570,6 +570,78 @@ export const editProjectController = async (req, res) => {
 
 
 
+// GET /api/projects/:projectId/members  (show available users from projects to be assigned to task)
+export const getProjectMembersController = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const loggedInUser = req.user;
+
+    // 1️⃣ Find project
+    const project = await ProjectModel.findById(projectId).populate(
+      "members",
+      "name email profilePic" // select only necessary fields
+    );
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // 2️⃣ Check if loggedInUser is part of the project
+    const isMember = project.members.some(
+      (member) => member._id.toString() === loggedInUser._id.toString()
+    );
+    if (!isMember) {
+      return res.status(403).json({
+        message: "You are not a member of this project",
+        success: false,
+        error: true,
+      });
+    }
+
+    // 3️⃣ Return list of members
+    return res.status(200).json({
+      message: "Project members fetched successfully",
+      success: true,
+      error: false,
+      data: project.members,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: err.message || "Internal Server Error",
+      success: false,
+      error: true,
+    });
+  }
+};
+
+export const getProjectDetailController = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await ProjectModel.findById(projectId).populate({
+      path:"members",
+      select: "name email"
+    })
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      project,
+    });
+  } catch (error) {
+    console.error("Error fetching project detail:", error);
+    res.status(500).json({ message: "Server error",error });
+  }
+};
+
+
 
 
 

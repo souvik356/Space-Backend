@@ -1,6 +1,6 @@
 import express from 'express'
 import userAuth from '../middleware/userAuth.js'
-import { addMemberToProjectController, createProjectController, editProjectController, getMembersForProject, getPipelinesForProject, getPipelinesWithTasks, getProjectsUnderSpaceController, getProjectsWithPipelines, getSpaceUsers, removeMemberFromProjectController } from '../controller/project.controller.js'
+import { addMemberToProjectController, createProjectController, editProjectController, getMembersForProject, getPipelinesForProject, getPipelinesWithTasks, getProjectDetailController, getProjectMembersController, getProjectsUnderSpaceController, getProjectsWithPipelines, getSpaceUsers, removeMemberFromProjectController } from '../controller/project.controller.js'
 import { createPipelineController, listPipelinesController, listTasksInPipelineController } from '../controller/pipeline.controller.js';
 
 const projectRouter = express.Router()
@@ -43,5 +43,12 @@ projectRouter.get('/getProjectWithPipeline',userAuth,getProjectsWithPipelines)
 
 projectRouter.put('/editProject/:spaceId/:projectId',userAuth,editProjectController)
 
+
+
+
+// use this api to get available members from projects to be asssigned to task
+projectRouter.get('/getProjectMembers//:projectId/members',userAuth,getProjectMembersController)
+
+projectRouter.get('/project-details/:projectId',userAuth,getProjectDetailController)
 
 export default projectRouter
