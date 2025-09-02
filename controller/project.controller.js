@@ -641,6 +641,26 @@ export const getProjectDetailController = async (req, res) => {
   }
 };
 
+export const deleteProjectController = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user; // Assuming userAuth sets req.user
+
+    // Check if project exists
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    await ProjectModel.findByIdAndDelete(projectId);
+
+    return res.status(200).json({ message: "Project deleted successfully" });
+    
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 
 
