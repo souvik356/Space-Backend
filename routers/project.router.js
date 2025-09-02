@@ -1,6 +1,6 @@
 import express from 'express'
 import userAuth from '../middleware/userAuth.js'
-import { addMemberToProjectController, createProjectController, getMembersForProject, getPipelinesForProject, getPipelinesWithTasks, getProjectsUnderSpaceController, getProjectsWithPipelines, getSpaceUsers, removeMemberFromProjectController } from '../controller/project.controller.js'
+import { addMemberToProjectController, createProjectController, editProjectController, getMembersForProject, getPipelinesForProject, getPipelinesWithTasks, getProjectsUnderSpaceController, getProjectsWithPipelines, getSpaceUsers, removeMemberFromProjectController } from '../controller/project.controller.js'
 import { createPipelineController, listPipelinesController, listTasksInPipelineController } from '../controller/pipeline.controller.js';
 
 const projectRouter = express.Router()
@@ -41,8 +41,7 @@ projectRouter.get("/projects/:projectId/pipelines",userAuth,getPipelinesForProje
 // show project with pipeline
 projectRouter.get('/getProjectWithPipeline',userAuth,getProjectsWithPipelines)
 
-
-
+projectRouter.put('/editProject/:spaceId/:projectId',userAuth,editProjectController)
 
 
 export default projectRouter

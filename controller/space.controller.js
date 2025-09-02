@@ -343,3 +343,81 @@ export const getAvailableUsersForNewSpace = async (req, res) => {
   }
 };
 
+// PUT /api/spaces/:spaceId
+
+export const editSpaceController = async (req, res) => {
+  try {
+    const { spaceId } = req.params;
+    const { spaceName, description, members = [] } = req.body;
+    const loggedInUser = req.user;
+
+    // Find the space
+    const space = await SpaceModel.findById(spaceId);
+    if (!space) {
+      return res.status(404).json({
+        message: "Space not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Check permission → only owner can edit (you can extend this to admins if required)
+    if (space.ownerId.toString() !== loggedInUser._id.toString()) {
+      return res.status(403).json({
+        message: "Only the owner can edit this space",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Validate members (ensure all exist in UserModel)
+    const allMembers = [...new Set([...members, loggedInUser._id.toString()])];
+    const validUsers = await UserModel.find({ _id: { $in: allMembers } }).select("_id");
+    const validUserIds = validUsers.map(user => user._id.toString());
+
+    const invalidMembers = allMembers.filter(id => !validUserIds.includes(id));
+    if (invalidMembers.length > 0) {
+      return res.status(400).json({
+        message: "One or more member IDs are invalid",
+        invalidMembers,
+        success: false,
+        error: true,
+      });
+    }
+
+    // Update space fields
+    if (spaceName) space.spaceName = spaceName;
+    if (description) space.description = description;
+    space.members = validUserIds;
+
+    const updatedSpace = await space.save();
+
+    // Sync users' `spaces` array (add this spaceId to new members if not already there)
+    await UserModel.updateMany(
+      { _id: { $in: validUserIds }, spaces: { $ne: space._id } },
+      { $push: { spaces: space._id } }
+    );
+
+    // Remove this space from users who are no longer members
+    await UserModel.updateMany(
+      { _id: { $nin: validUserIds } },
+      { $pull: { spaces: space._id } }
+    );
+
+    return res.status(200).json({
+      message: "Space updated successfully",
+      data: updatedSpace,
+      success: true,
+      error: false,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to update space: " + error.message,
+      error: true,
+      success: false,
+    });
+  }
+};
+
+

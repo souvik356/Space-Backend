@@ -1,5 +1,4 @@
 // spaceId inside (Project)
-
 import ProjectModel from "../model/Project.js";
 import SpaceModel from "../model/Space.js";
 import UserModel from "../model/User.js";
@@ -74,7 +73,6 @@ export const createProjectController = async (req, res) => {
     });
   }
 };
-
 
 
 export const addMemberToProjectController = async (req, res) => {
@@ -493,6 +491,77 @@ export const getProjectsWithPipelines = async (req, res) => {
   } catch (err) {
     return res.status(500).json({
       message: err.message || "Something went wrong",
+      success: false,
+      error: true,
+    });
+  }
+};
+
+// PUT /api/projects/:spaceId/:projectId
+export const editProjectController = async (req, res) => {
+  try {
+    const { spaceId, projectId } = req.params;
+    const loggedInUser = req.user;
+    const { projectName, description, members, endDate, status } = req.body;
+
+    // find space
+    const space = await SpaceModel.findById(spaceId);
+    if (!space) {
+      return res.status(404).json({
+        message: "Space not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // check permissions (owner or admin)
+    const isOwner = space.ownerId.toString() === loggedInUser._id.toString();
+    const isAdmin = space.admin.some(
+      (id) => id.toString() === loggedInUser._id.toString()
+    );
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({
+        message: "Only owner or admin can edit a project",
+        success: false,
+        error: true,
+      });
+    }
+
+    // find project inside this space
+    const project = await ProjectModel.findOne({ _id: projectId, spaceId });
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found in this space",
+        success: false,
+        error: true,
+      });
+    }
+
+    // update fields (if provided)
+    if (projectName) project.projectName = projectName;
+    if (description) project.description = description;
+    if (endDate) project.endDate = endDate;
+    if (status) project.status = status;
+
+    // update members (optional)
+    if (Array.isArray(members)) {
+      // ensure no duplicates
+      const uniqueMembers = Array.from(new Set(members.map(m => m.toString())));
+      project.members = uniqueMembers;
+    }
+
+    const updatedProject = await project.save();
+
+    return res.status(200).json({
+      message: "Project updated successfully",
+      success: true,
+      error: false,
+      data: updatedProject,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
       success: false,
       error: true,
     });
